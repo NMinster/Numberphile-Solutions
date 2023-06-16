@@ -1,0 +1,176 @@
+import tkinter as tk
+import networkx as nx
+
+def ccw(A, B, C):
+    """Checks whether the points A, B, C are counterclockwise."""
+    return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+
+def do_lines_intersect(A, B, C, D):
+    """Checks whether the line segments AB and CD intersect."""
+    return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
+
+
+
+def play_game():
+    """Main game loop."""
+    level = 1
+    while True:
+        print(f"Starting level {level}")
+        factories, storage_sites = create_level(level)
+        G = nx.Graph()
+        for factory in factories:
+            for storage_site in storage_sites:
+                if can_connect(G, factory, storage_site):
+                    print(f"Connected {factory} to {storage_site}")
+                else:
+                    print(f"Cannot connect {factory} to {storage_site}")
+        # For simplicity, we're just automatically connecting the factories and storage sites here.
+        # In a real game, the player would decide which sites to connect.
+        level += 1
+        
+
+
+def create_level(level):
+    """Creates the factories and storage sites for a level."""
+    if level == 1:
+        factories = [(1, 1)]
+        storage_sites = [(3, 3)]
+    elif level == 2:
+        factories = [(1, 1)]
+        storage_sites = [(3, 3), (4, 1)]
+    elif level == 3:
+        factories = [(1, 1), (4, 1)]
+        storage_sites = [(1, 4), (4, 4)]
+    else:
+        raise ValueError("Invalid level number")
+    return factories, storage_sites
+
+
+def load_level(level):
+    """Loads a level by creating its factories and storage sites and drawing them on the canvas."""
+    global factories
+    global storage_sites
+    global G
+
+    factories, storage_sites = create_level(level)
+    G = nx.Graph()
+
+    # Clear the canvas and redraw the grid
+    canvas.delete("all")
+    draw_grid(canvas, grid_size)
+
+    # Draw the factories and storage sites
+    draw_points(canvas, factories, color='blue')
+    draw_points(canvas, storage_sites, color='green')
+
+
+
+# Your game logic functions stay the same
+
+def draw_grid(canvas, grid_size, cell_size=20):
+    """Draws a grid on a tkinter canvas."""
+    for i in range(grid_size):
+        for j in range(grid_size):
+            x1 = i * cell_size
+            y1 = j * cell_size
+            x2 = x1 + cell_size
+            y2 = y1 + cell_size
+            canvas.create_rectangle(x1, y1, x2, y2)
+
+def draw_points(canvas, points, cell_size=20, color='red'):
+    """Draws points on a tkinter canvas."""
+    for point in points:
+        x1 = point[0] * cell_size
+        y1 = point[1] * cell_size
+        x2 = x1 + cell_size
+        y2 = y1 + cell_size
+        canvas.create_oval(x1, y1, x2, y2, fill=color)
+
+def on_canvas_click(event):
+    """Event handler for mouse clicks on the canvas."""
+    global last_clicked_point
+    global level
+
+    x = event.x // 20
+    y = event.y // 20
+    clicked_point = (x, y)
+
+    # If a point was clicked before, try to connect it to the new point
+    if last_clicked_point is not None:
+        if can_connect(G, last_clicked_point, clicked_point):
+            # If the points can be connected, add the connection to the graph
+            G.add_edge(last_clicked_point, clicked_point)
+
+            # And draw a line between them
+            x1 = last_clicked_point[0] * 20 + 10  # Updated to make line appear from the center of the circle
+            y1 = last_clicked_point[1] * 20 + 10  # Same as above
+            x2 = clicked_point[0] * 20 + 10  # Same as above
+            y2 = clicked_point[1] * 20 + 10  # Same as above
+            canvas.create_line(x1, y1, x2, y2)
+
+            # Check if all factories have been connected
+            if all_connected(G, factories, storage_sites):
+                # If they have, increment the level and load the next level
+                level += 1
+                load_level(level)
+        last_clicked_point = None
+    else:
+        # If no point was clicked before, store the new point
+        last_clicked_point = clicked_point
+
+def all_connected(G, factories, storage_sites):
+    """Checks if all factories are connected to a storage site."""
+    connected_factories = []
+    connected_storage_sites = []
+    for factory in factories:
+        for storage in storage_sites:
+            if G.has_edge(factory, storage):
+                if factory not in connected_factories:
+                    connected_factories.append(factory)
+                if storage not in connected_storage_sites:
+                    connected_storage_sites.append(storage)
+    if len(connected_factories) == len(factories) and len(connected_storage_sites) == len(storage_sites):
+        return True
+    else:
+        return False
+
+
+
+def can_connect(G, point1, point2):
+    """Checks if two points can be connected without intersecting any lines."""
+    for edge in G.edges:
+        if do_lines_intersect(point1, point2, edge[0], edge[1]):
+            return False
+    return True
+
+
+def main():
+    global G
+    global last_clicked_point
+    global canvas
+    global factories
+    global storage_sites
+    global level
+    global grid_size   # Add this line
+
+    # Initialize the global variables
+    factories = []
+    storage_sites = []
+    G = None
+    level = 1
+    grid_size = 20    # And this line
+
+    root = tk.Tk()
+    canvas = tk.Canvas(root, width=400, height=400)
+    canvas.pack()
+    canvas.bind("<Button-1>", on_canvas_click)
+
+    last_clicked_point = None
+
+    # Load the first level
+    load_level(level)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
