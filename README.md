@@ -4,3 +4,4 @@ This is a collection of solutions or implementations of problems presented on th
 
 All solutions are my own implementation and there may be better solutions or implementions. However this is for fun and I''m focusing on novel ideas and creativity. 
 
+Many are works in progress and many have no known solutions. 
